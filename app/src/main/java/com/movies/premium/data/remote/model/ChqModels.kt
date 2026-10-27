@@ -24,15 +24,23 @@ data class HiAnimeTrack(
     @SerializedName("default") val isDefault: Boolean? = null,
 )
 
+/** Subtitle object containing language and url. */
+data class Subtitle(
+    @SerializedName(value = "language", alternate = ["lang"]) val language: String? = null,
+    @SerializedName("url") val url: String? = null,
+)
+
 /** A single playable stream returned by the CHQ backend. */
 data class ChqStream(
-    @SerializedName("server", alternate = ["name"]) val name: String? = null,
+    @SerializedName("name", alternate = ["server"]) val name: String? = null,
+    @SerializedName("title") val title: String? = null,
     @SerializedName("url", alternate = ["magnet"]) val url: String? = null,
     @SerializedName("quality") val quality: String? = null,
+    @SerializedName("headers") val headers: Map<String, String>? = null,
+    @SerializedName("subtitles") val subtitles: List<Subtitle>? = null,
     @SerializedName("type") val type: String? = null,
     @SerializedName("stream_type") val streamType: String? = null,
     @SerializedName("size") val size: String? = null,
-    @SerializedName("headers") val headers: Map<String, String>? = null,
     @SerializedName("seeders") val seeders: Int? = null,
     @SerializedName("info_hash", alternate = ["infoHash"]) val infoHash: String? = null,
     @SerializedName("file_index", alternate = ["fileIdx"]) val fileIdx: Int? = null,
@@ -47,10 +55,12 @@ data class ChqStream(
      * the "Sources (http)" / "Sources (Torrents)" / "Sources (Anime)" switches
      * of the settings screen, which switch a provider off entirely.
      */
-    val provider: String? = null,
+    @SerializedName("provider") val provider: String? = null,
 )
 
 data class ChqStreamResponse(
+    @SerializedName("success") val success: Boolean? = null,
+    @SerializedName("tmdbId") val tmdbId: String? = null,
     @SerializedName("streams") val streams: List<ChqStream>? = null,
     @SerializedName("count") val count: Int? = null,
     @SerializedName("error") val error: String? = null,
@@ -104,9 +114,17 @@ data class ChqStreamItem(
      */
     val title: String? = null,
     val url: String? = null,
-    /** `"movie"` or `"series"` — the media type, not the stream type. */
+    /** Display label shown in the player/source list. */
+    val name: String? = null,
+    /** The resolution of the stream, e.g. `1080p`. */
+    val quality: String? = null,
+    /** HTTP headers to send with the request. */
+    @SerializedName("headers") val headers: Map<String, String>? = null,
+    /** Caption subtitles for this stream. */
+    @SerializedName("subtitles") val subtitles: List<Subtitle>? = null,
+    /** `movie` or `series` — the media type, not the stream type. */
     val type: String? = null,
-    /** The provider the source came from: `notorrent`, `nebula`, `hdhub`, `vidrock`. */
+    /** The provider the source came from: notorrent, nebula, hdhub, vidrock. */
     val provider: String? = null,
     val behaviorHints: ChqBehaviorHints? = null,
 )

@@ -75,7 +75,7 @@ fun HomeScreen(
             // The name of the app. The original calls itself "CinemaHQ", which
             // says nothing about the anime, music, live-TV and games sections
             // the same app also carries — hence "AIO Hub" ("all in one hub").
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            Column(modifier = Modifier.padding(start = 64.dp, end = 20.dp, top = 4.dp, bottom = 4.dp)) {
                 Text(
                     text = "AIO Hub",
                     style = MaterialTheme.typography.headlineMedium,

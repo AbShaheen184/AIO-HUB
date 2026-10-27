@@ -678,7 +678,7 @@ class PlayerViewModel @Inject constructor(
      */
     private fun externalSubtitles(stream: ChqStream): List<SubtitleItem> {
         val tracks = AnimeSubtitleStore.consume().ifEmpty { stream.animeSubtitles.orEmpty() }
-        return tracks.mapNotNull { track ->
+        val animeSubs = tracks.mapNotNull { track ->
             val link = track.file?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
             SubtitleItem(
                 label = track.label?.takeIf { it.isNotBlank() } ?: track.kind.orEmpty(),
@@ -687,6 +687,17 @@ class PlayerViewModel @Inject constructor(
                 isDefault = track.isDefault == true,
             )
         }
+        val directSubs = stream.subtitles.orEmpty().mapNotNull { sub ->
+            val link = sub.url?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val lang = sub.language?.takeIf { it.isNotBlank() } ?: "Subtitle"
+            SubtitleItem(
+                label = lang,
+                url = link,
+                lang = lang,
+                isDefault = false,
+            )
+        }
+        return animeSubs + directSubs
     }
 
     // --- the reachability probe ------------------------------------------------

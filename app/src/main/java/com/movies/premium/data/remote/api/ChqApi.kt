@@ -10,6 +10,7 @@ import com.movies.premium.data.remote.model.IptvGroupsResponse
 import com.movies.premium.data.remote.model.IptvSearchResponse
 import com.movies.premium.data.remote.model.IptvStatsResponse
 import okhttp3.ResponseBody
+import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
@@ -20,19 +21,29 @@ import retrofit2.http.Query
  * endpoint on the same host, so the app can fan out across providers in parallel.
  */
 interface ChqApi {
-    // --- The current stream routes -------------------------------------------
-    //
-    // The backend replaced the per-provider routes below with this family. The
-    // old ones answer `404` on the live host, so the repository tries these
-    // first and only falls back to the legacy ones when they are unavailable.
+    // --- The TMDB-Embed-API stream routes -------------------------------------
 
-    /** Every provider, for a movie. */
+    /** Movie streams from TMDB-Embed-API backend. */
+    @GET("api/streams/movie/{id}")
+    suspend fun getMovieStreams(
+        @Path("id") tmdbId: String,
+    ): Response<ChqStreamResponse>
+
+    /** TV Series streams from TMDB-Embed-API backend. */
+    @GET("api/streams/series/{id}")
+    suspend fun getTvStreams(
+        @Path("id") tmdbId: String,
+        @Query("s") season: Int = 0,
+        @Query("e") episode: Int = 0,
+    ): Response<ChqStreamResponse>
+
+    /** Every provider, for a movie (legacy/multi route). */
     @GET("api/streams/{id}")
     suspend fun getAllStreams(
         @Path("id") id: String,
     ): ChqStreamsResponse
 
-    /** Every provider, for one episode of a series. */
+    /** Every provider, for one episode of a series (legacy/multi route). */
     @GET("api/streams/{id}/{season}/{episode}")
     suspend fun getAllStreamsForEpisode(
         @Path("id") id: String,

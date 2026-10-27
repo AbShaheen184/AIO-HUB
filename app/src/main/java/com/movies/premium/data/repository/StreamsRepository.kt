@@ -62,24 +62,50 @@ class StreamsRepository @Inject constructor(
         // A series is only resolvable per episode: the backend looks a bare id up
         // in its *movie* table and answers with a completely different title, so
         // asking without a season and an episode would return the wrong film.
+        // But for the TMDB-Embed-API, the /series/{id} route is the correct one
+        // for TV shows too, so we always try it instead of bouncing to the
+        // movie route — especially when no episode is selected yet.
         if (mediaType == "tv" && !hasEpisode) {
-            Logger.d(TAG, "No episode chosen for tv id=$id — nothing to resolve")
-            return emptyList()
+            Logger.d(TAG, "No episode chosen for tv id=$id — asking series endpoint without episode query params")
         }
 
         // The providers the user switched off in the settings are not asked.
         val disabled = disabledProviders()
 
         val current = try {
-            val response = if (hasEpisode) {
-                api.getAllStreamsForEpisode(id, season ?: 0, episode ?: 0)
+            val res = if (mediaType == "movie") {
+                // Movies: the movie endpoint is the correct route; use it.
+                api.getMovieStreams(id)
             } else {
-                api.getAllStreams(id)
+                // TV series and any other type: use the tv endpoint. The movie
+                // endpoint is wrong for TV (it answers with a different title).
+                // No season/episode -> ask the tv overview endpoint without query params.
+                if (hasEpisode) {
+                    api.getTvStreams(id, season ?: 0, episode ?: 0)
+                } else {
+                    // Series overview: no episode selected. Default season/episode
+                    // to 0, which the backend treats as "overview" mode.
+                    api.getTvStreams(id, 0, 0)
+                }
             }
-            response.toStreams()
+            if (res.isSuccessful) {
+                res.body()?.streams.orEmpty().map { it.normalize() } ?: emptyList()
+            } else {
+                Logger.d(TAG, "TMDB-Embed-API HTTP ${res.code()} for id=$id — trying fallback routes")
+                emptyList()
+            }
         } catch (e: Exception) {
-            Logger.d(TAG, "New stream route failed for id=$id: ${e.message} — trying the legacy routes")
-            return fetchLegacy(tmdbId, mediaType, season, episode, imdbId, disabled)
+            Logger.d(TAG, "TMDB-Embed-API route failed for id=$id: ${e.message} — trying fallback routes")
+            try {
+                val response = if (hasEpisode) {
+                    api.getAllStreamsForEpisode(id, season ?: 0, episode ?: 0)
+                } else {
+                    api.getAllStreams(id)
+                }
+                response.toStreams()
+            } catch (_: Exception) {
+                return fetchLegacy(tmdbId, mediaType, season, episode, imdbId, disabled)
+            }
         }
 
         val enabled = current.filter { it.provider !in disabled }
@@ -257,6 +283,18 @@ class StreamsRepository @Inject constructor(
             size = bytes?.let { humanSize(it) },
             description = title,
             provider = provider,
+            headers = headers,
+            subtitles = subtitles,
+        )
+    }
+
+    private fun ChqStream.normalize(): ChqStream {
+        val displayName = name?.takeIf { it.isNotBlank() } ?: title ?: "Stream"
+        val isHls = url?.contains(".m3u8", ignoreCase = true) == true
+        return copy(
+            name = displayName,
+            type = type ?: if (isHls) "hls" else "direct",
+            streamType = streamType ?: if (isHls) "hls" else "direct",
         )
     }
 

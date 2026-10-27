@@ -1,22 +1,35 @@
 package com.movies.premium.ui.navigation
 
+import android.view.KeyEvent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.NavigationRail
-import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -170,41 +183,15 @@ private fun sidebarDestinations(
         .filter { it.title !in hiddenTitles }
 }
 
-/** The width of the expanded rail — the width Material3 gives a navigation rail. */
-private val SIDEBAR_RAIL_WIDTH = 80.dp
+/** The width of the overlay drawer. */
+private val SIDEBAR_DRAWER_WIDTH = 260.dp
 
 /**
- * The width of the collapsed strip.
+ * The overlay navigation drawer.
  *
- * It carries nothing but the hamburger button, so it is as narrow as the
- * touch target of a button.
- */
-private val SIDEBAR_COLLAPSED_WIDTH = 56.dp
-
-/**
- * The collapsible sidebar.
- *
- * **Deviation from the original.** The original has no drawer and no
- * collapsible sidebar: its list of destinations is always on the left, and
- * the user asked for a sidebar that can be hidden so that the screens get
- * the room they need. This is the replica's own design, not the original's.
- *
- * **Why a `NavigationRail` and not a `ModalNavigationDrawer`.**
- *
- * * The screens of this app draw their own header — the title of the section
- *   is the first thing on the screen — and a modal drawer is drawn *over*
- *   the content: it would cover that header and it would need a scrim, which
- *   is not what "give the screen its room back" means.
- * * The rail is a sibling of the content in the row of [CinemaHQApp], so
- *   expanding it simply widens the rail and narrows the content — the layout
- *   of the original, with the destinations in the same place.
- * * The original's own widget for the destinations is a rail, so the
- *   `NavigationRail` keeps the look of the app, and the only thing that is
- *   new is the hamburger that collapses it.
- *
- * The hamburger sits in the `header` slot of the rail while the rail is
- * expanded and in a narrow strip of its own while it is collapsed, so the
- * button is reachable on every screen that is not the fullscreen player.
+ * Appears floating ABOVE the screen content when expanded, with a dark scrim behind
+ * it, and reduces to a single 3-line hamburger menu button at top-left when collapsed so
+ * that the screen content occupies the full width without any side gap.
  */
 @Composable
 private fun CollapsibleSidebar(
@@ -214,89 +201,129 @@ private fun CollapsibleSidebar(
     onToggle: () -> Unit,
     onDestinationClick: (SidebarDestination) -> Unit,
     modifier: Modifier = Modifier,
-    /** Asked for the focus when the rail is opened — see [CinemaHQApp]. */
+    /** Asked for the focus when the drawer is opened — see [CinemaHQApp]. */
     firstItemRequester: FocusRequester = remember { FocusRequester() },
-    /** Asked for the focus when the rail is closed, and at the start. */
+    /** Asked for the focus when the drawer is closed, and at the start. */
     menuRequester: FocusRequester = remember { FocusRequester() },
 ) {
-    if (expanded) {
-        NavigationRail(
-            modifier = modifier.width(SIDEBAR_RAIL_WIDTH),
-            header = {
-                NavigationRailItem(
-                    selected = false,
-                    onClick = onToggle,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Default.Menu,
-                            contentDescription = "Hide the menu",
-                        )
-                    },
-                    label = { Text("Menu") },
-                    modifier = Modifier.focusRequester(menuRequester),
-                )
-            },
-        ) {
-            // The rail can hold more entries than fit on a short screen, so it
-            // scrolls — the original's sidebar does the same.
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-            ) {
-                destinations.forEachIndexed { index, destination ->
-                    NavigationRailItem(
-                        selected = isSelected(destination),
-                        onClick = { onDestinationClick(destination) },
-                        icon = { Icon(destination.icon, contentDescription = null) },
-                        label = { Text(destination.title) },
-                        modifier = if (index == 0) {
-                            Modifier.focusRequester(firstItemRequester)
-                        } else {
-                            Modifier
-                        },
+    Box(modifier = modifier) {
+        if (expanded) {
+            // Semi-transparent scrim covering full screen
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onToggle,
                     )
+            )
+
+            // Overlapping drawer surface on the left
+            Surface(
+                modifier = Modifier
+                    .width(SIDEBAR_DRAWER_WIDTH)
+                    .fillMaxHeight()
+                    .statusBarsPadding(),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                shape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp),
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Drawer Header
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        IconButton(
+                            onClick = onToggle,
+                            modifier = Modifier.focusRequester(menuRequester),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Close Menu",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "AIO Hub",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    // Destinations list
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(vertical = 8.dp, horizontal = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        destinations.forEachIndexed { index, destination ->
+                            NavigationDrawerItem(
+                                label = { Text(destination.title) },
+                                icon = { Icon(destination.icon, contentDescription = null) },
+                                selected = isSelected(destination),
+                                onClick = { onDestinationClick(destination) },
+                                modifier = if (index == 0) {
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .focusRequester(firstItemRequester)
+                                } else {
+                                    Modifier.fillMaxWidth()
+                                },
+                            )
+                        }
+                    }
                 }
             }
-        }
-    } else {
-        // Collapsed: a narrow strip that carries nothing but the hamburger.
-        //
-        // The strip stands next to the `Scaffold` and not inside it, so it
-        // gets no inset from the scaffold and the button would sit *under*
-        // the status bar — half of it unreachable, because the status bar
-        // window swallows the touches. The expanded rail gets the inset
-        // from the `NavigationRail` itself; the collapsed one has to ask
-        // for it.
-        Column(
-            modifier = modifier
-                .width(SIDEBAR_COLLAPSED_WIDTH)
-                .fillMaxHeight()
-                .statusBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            IconButton(
-                onClick = onToggle,
-                // A television has no finger: the strip is reached with the
-                // left button of the remote, and the same button opens the
-                // rail — the strip is the leftmost thing on the screen, so
-                // there is nothing to the left of it.
+        } else {
+            // Collapsed: floating 3-line hamburger menu button at top-left
+            Box(
                 modifier = Modifier
-                    .focusRequester(menuRequester)
-                    .onPreviewKeyEvent { event ->
-                        val native = event.nativeKeyEvent
-                        if (native.action == android.view.KeyEvent.ACTION_DOWN &&
-                            native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT
-                        ) {
-                            onToggle()
-                            true
-                        } else {
-                            false
-                        }
-                    },
+                    .statusBarsPadding()
+                    .padding(start = 12.dp, top = 8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    contentDescription = "Show the menu",
-                )
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    tonalElevation = 4.dp,
+                    shadowElevation = 6.dp,
+                    onClick = onToggle,
+                    modifier = Modifier
+                        .focusRequester(menuRequester)
+                        .onPreviewKeyEvent { event ->
+                            val native = event.nativeKeyEvent
+                            if (native.action == KeyEvent.ACTION_DOWN &&
+                                native.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
+                            ) {
+                                onToggle()
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                ) {
+                    Box(
+                        modifier = Modifier.padding(10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Menu,
+                            contentDescription = "Show Menu",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
             }
         }
     }
@@ -375,46 +402,8 @@ fun CinemaHQApp(
         sidebarDestinations(storedOrder, hiddenTitles)
     }
 
-    Row(Modifier.fillMaxSize()) {
-        if (showRail) {
-            CollapsibleSidebar(
-                destinations = destinations,
-                isSelected = { destination ->
-                    backStackEntry?.destination?.hierarchy?.any {
-                        it.route == destination.route
-                    } == true
-                },
-                expanded = sidebarExpanded,
-                onToggle = {
-                    val willExpand = !sidebarExpanded
-                    sidebarExpanded = willExpand
-                    if (willExpand) moveFocusToRail = true else moveFocusToMenu = true
-                },
-                firstItemRequester = firstRailItem,
-                menuRequester = menuButton,
-                onDestinationClick = { destination ->
-                    // A section is entered as itself. The detail screen that
-                    // was open on it must not come back with it: the
-                    // navigation saves the whole stack of a section when the
-                    // user leaves it — the detail included — and restores
-                    // that stack when the user comes back. So every detail
-                    // is popped first, and what is saved is the section
-                    // alone.
-                    Routes.DETAIL_ROUTES.forEach { route ->
-                        navController.popBackStack(route, inclusive = true)
-                    }
-                    navController.navigate(destination.route) {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                },
-            )
-        }
-
-        Scaffold(modifier = Modifier.weight(1f)) { innerPadding ->
+    Box(Modifier.fillMaxSize()) {
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             NavHost(
                 navController = navController,
                 startDestination = Routes.HOME,
@@ -809,6 +798,38 @@ fun CinemaHQApp(
                     PlayerScreen(viewModel = hiltViewModel())
                 }
             }
+        }
+
+        if (showRail) {
+            CollapsibleSidebar(
+                destinations = destinations,
+                isSelected = { destination ->
+                    backStackEntry?.destination?.hierarchy?.any {
+                        it.route == destination.route
+                    } == true
+                },
+                expanded = sidebarExpanded,
+                onToggle = {
+                    val willExpand = !sidebarExpanded
+                    sidebarExpanded = willExpand
+                    if (willExpand) moveFocusToRail = true else moveFocusToMenu = true
+                },
+                firstItemRequester = firstRailItem,
+                menuRequester = menuButton,
+                onDestinationClick = { destination ->
+                    sidebarExpanded = false
+                    Routes.DETAIL_ROUTES.forEach { route ->
+                        navController.popBackStack(route, inclusive = true)
+                    }
+                    navController.navigate(destination.route) {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+            )
         }
     }
 }
