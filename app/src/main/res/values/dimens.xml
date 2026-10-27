@@ -1,0 +1,470 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="abc_dialog_fixed_height_major">79.99999%</dimen>
+    <dimen name="abc_dialog_fixed_height_minor">100.0%</dimen>
+    <dimen name="abc_dialog_fixed_width_major">320.0dp</dimen>
+    <dimen name="abc_dialog_fixed_width_minor">320.0dp</dimen>
+    
+    
+    <dimen name="abc_dialog_min_width_major">65.0%</dimen>
+    <dimen name="abc_dialog_min_width_minor">95.00001%</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="design_snackbar_action_text_color_alpha">1.0</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="disabled_alpha_material_dark">0.3</dimen>
+    <dimen name="disabled_alpha_material_light">0.26</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="highlight_alpha_material_colored">0.26</dimen>
+    <dimen name="highlight_alpha_material_dark">0.2</dimen>
+    <dimen name="highlight_alpha_material_light">0.12</dimen>
+    <dimen name="hint_alpha_material_dark">0.5</dimen>
+    <dimen name="hint_alpha_material_light">0.38</dimen>
+    <dimen name="hint_pressed_alpha_material_dark">0.7</dimen>
+    <dimen name="hint_pressed_alpha_material_light">0.54</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="m3_comp_scrim_container_opacity">0.32</dimen>
+    
+    <dimen name="m3_comp_switch_disabled_selected_handle_opacity">1.0</dimen>
+    <dimen name="m3_comp_switch_disabled_selected_icon_opacity">0.38</dimen>
+    <dimen name="m3_comp_switch_disabled_track_opacity">0.12</dimen>
+    <dimen name="m3_comp_switch_disabled_unselected_handle_opacity">0.38</dimen>
+    <dimen name="m3_comp_switch_disabled_unselected_icon_opacity">0.38</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="m3_sys_motion_easing_standard_control_x1">0.2</dimen>
+    <dimen name="m3_sys_motion_easing_standard_control_x2">0.0</dimen>
+    <dimen name="m3_sys_motion_easing_standard_control_y1">0.0</dimen>
+    <dimen name="m3_sys_motion_easing_standard_control_y2">1.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_default_effects_damping">1.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_default_effects_stiffness">1600.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_default_spatial_damping">0.9</dimen>
+    <dimen name="m3_sys_motion_standard_spring_default_spatial_stiffness">700.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_fast_effects_damping">1.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_fast_effects_stiffness">3800.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_fast_spatial_damping">0.9</dimen>
+    <dimen name="m3_sys_motion_standard_spring_fast_spatial_stiffness">1400.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_slow_effects_damping">1.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_slow_effects_stiffness">800.0</dimen>
+    <dimen name="m3_sys_motion_standard_spring_slow_spatial_damping">0.9</dimen>
+    <dimen name="m3_sys_motion_standard_spring_slow_spatial_stiffness">300.0</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="material_emphasis_disabled">0.38</dimen>
+    <dimen name="material_emphasis_high_type">0.87</dimen>
+    <dimen name="material_emphasis_medium">0.6</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="mtrl_btn_letter_spacing">0.07</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="mtrl_high_ripple_default_alpha">0.48</dimen>
+    <dimen name="mtrl_high_ripple_focused_alpha">0.48</dimen>
+    <dimen name="mtrl_high_ripple_hovered_alpha">0.16</dimen>
+    <dimen name="mtrl_high_ripple_pressed_alpha">0.48</dimen>
+    <dimen name="mtrl_low_ripple_default_alpha">0.24</dimen>
+    <dimen name="mtrl_low_ripple_focused_alpha">0.24</dimen>
+    <dimen name="mtrl_low_ripple_hovered_alpha">0.08</dimen>
+    <dimen name="mtrl_low_ripple_pressed_alpha">0.24</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="mtrl_navigation_rail_active_text_size">14.0dp</dimen>
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="mtrl_navigation_rail_text_size">12.0dp</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <dimen name="mtrl_snackbar_action_text_color_alpha">0.5</dimen>
+    
+    <dimen name="mtrl_snackbar_background_overlay_color_alpha">0.8</dimen>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</resources>

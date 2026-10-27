@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The notification icon of "AIO Hub".
+
+  The system tints a notification's small icon and keeps only its alpha, so
+  the mark is drawn in a single opaque white — the hub ring, its four nodes
+  and the play triangle in the middle, the same artwork as the launcher icon.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="192dp"
+    android:height="192dp"
+    android:viewportWidth="192"
+    android:viewportHeight="192">
+
+    <path
+        android:pathData="M96,24 A72,72 0 1,0 96,168 A72,72 0 1,0 96,24 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="13" />
+
+    <path
+        android:pathData="M45.1,45.1 m-14.7,0 a14.7,14.7 0 1,0 29.4,0 a14.7,14.7 0 1,0 -29.4,0 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M146.9,45.1 m-14.7,0 a14.7,14.7 0 1,0 29.4,0 a14.7,14.7 0 1,0 -29.4,0 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M146.9,146.9 m-14.7,0 a14.7,14.7 0 1,0 29.4,0 a14.7,14.7 0 1,0 -29.4,0 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M45.1,146.9 m-14.7,0 a14.7,14.7 0 1,0 29.4,0 a14.7,14.7 0 1,0 -29.4,0 Z"
+        android:fillColor="#FFFFFFFF" />
+
+    <path
+        android:pathData="M77.3,61.3 L77.3,130.7 L133.4,96 Z"
+        android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="6"
+        android:strokeLineJoin="round" />
+
+</vector>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The mark on the splash screen.
+
+  The same hub glyph as the launcher icon, but scaled down to 60% of the
+  canvas: the system draws the splash icon into a circle and masks the
+  corners, so a full-bleed glyph would be cut off.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:pathData="M54,37.8 A16.2,16.2 0 1,0 54,70.2 A16.2,16.2 0 1,0 54,37.8 Z"
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3" />
+
+    <path
+        android:pathData="M42.54,42.54 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+        android:fillColor="#FF4ECDC4" />
+    <path
+        android:pathData="M65.46,42.54 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+        android:fillColor="#FF4ECDC4" />
+    <path
+        android:pathData="M65.46,65.46 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+        android:fillColor="#FF4ECDC4" />
+    <path
+        android:pathData="M42.54,65.46 m-3.3,0 a3.3,3.3 0 1,0 6.6,0 a3.3,3.3 0 1,0 -6.6,0 Z"
+        android:fillColor="#FF4ECDC4" />
+
+    <path
+        android:pathData="M49.8,45.8 L49.8,68.4 L68.4,54 Z"
+        android:fillColor="#FFFFFFFF"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+
+</vector>

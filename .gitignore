@@ -1,0 +1,33 @@
+# Gradle & Build output
+.gradle/
+build/
+**/build/
+gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration
+local.properties
+
+# Android Studio / IntelliJ IDEA
+.idea/
+*.iml
+.kotlin/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Output files
+*.apk
+*.aab
+*.aar
+*.dex
+*.class
+
+# Android NDK / Profiling / Native
+.externalNativeBuild/
+.cxx/
+captures/
+
+# Keystores / Sensitive files
+*.jks
+*.keystore

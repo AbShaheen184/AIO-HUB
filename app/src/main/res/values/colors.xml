@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    
+    
+    
+    
+    
+    
+    
+    <color name="background">#ffffff</color>
+    <color name="background_dark">#ff0f0f0f</color>
+    
+    
+    
+    
+    <color name="black">#ff000000</color>
+    
+    
+    
+    
+    
+    
+    <color name="button_border">#2c423f</color>
+    <color name="button_click">#465e5c</color>
+    <color name="button_focus">#5f7976</color>
+    
+    
+    <color name="button_primary_normal">#2c423f</color>
+    <color name="button_secondary_normal">#ffffff</color>
+    <color name="button_secondary_text">#2c423f</color>
+    <color name="button_text">#ffffff</color>
+    
+    
+    
+    
+    
+    
+    <color name="color_primary">#426fca</color>
+    <color name="color_primary_high_alpha">#cc426fca</color>
+    <color name="color_primary_low_alpha">#33426fca</color>
+    <color name="color_white_background">#ffffff</color>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <color name="gray_dark">#ff333333</color>
+    <color name="gray_medium">#ff666666</color>
+    
+    
+    <color name="hyperlink">#abb3b2</color>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    <color name="primary_blue">#ff6c9fff</color>
+    
+    
+    
+    
+    
+    
+    
+    
+    <color name="purple_200">#ffbb86fc</color>
+    <color name="purple_500">#ff6200ee</color>
+    <color name="purple_600">#ff5600e8</color>
+    <color name="purple_700">#ff3700b3</color>
+    
+    
+    <color name="secondary_teal">#ff4ecdc4</color>
+    
+    
+    
+    
+    
+    
+    
+    
+    <color name="text">#2c423f</color>
+    
+    
+    <color name="white">#ffffffff</color>
+</resources>
