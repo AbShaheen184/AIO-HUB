@@ -1,0 +1,14 @@
+allprojects {
+    tasks.register("deleteReleaseApk") {
+        doFirst {
+            def apkFile = file("${project.buildDir}/outputs/apk/release/app-release.apk")
+            if (apkFile.exists()) {
+                apkFile.delete()
+                println "Deleted existing APK: ${apkFile.absolutePath}"
+            }
+        }
+    }
+    tasks.named("packageRelease") {
+        dependsOn("deleteReleaseApk")
+    }
+}

@@ -38,8 +38,8 @@ android {
             isMinifyEnabled = false
         }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -59,6 +59,8 @@ android {
         buildConfig = true
     }
 
+
+
     packaging {
         resources {
             excludes += setOf(
@@ -70,6 +72,10 @@ android {
                 "META-INF/versions/9/previous-compilation-data.bin",
             )
         }
+        pickFirsts += setOf(
+            "assets/dexopt/baseline.prof",
+            "assets/dexopt/baseline.profm",
+        )
         jniLibs {
             // The original APK ships its native libraries uncompressed and
             // declares android:extractNativeLibs="true", so the installer
@@ -201,5 +207,27 @@ tasks.register("dumpAarArtifacts") {
             .resolvedArtifacts
             .filter { it.extension == "aar" }
             .forEach { println("AAR:" + it.file.absolutePath) }
+    }
+}
+
+
+tasks.matching { it.name.contains("Merge") && it.name.contains("Assets") }.configureEach {
+    doLast {
+        outputs.files.forEach { file ->
+            if (file.isDirectory) {
+                File(file, "dexopt").deleteRecursively()
+            }
+        }
+    }
+}
+
+tasks.matching { it.name.startsWith("package") }.configureEach {
+    outputs.upToDateWhen { false }
+    doFirst {
+        val buildDir = layout.buildDirectory.get().asFile
+        File(buildDir, "outputs/apk/release/app-release.apk").delete()
+        File(buildDir, "intermediates/apk/release/app-release.apk").delete()
+        File(buildDir, "outputs/apk/debug/app-debug.apk").delete()
+        File(buildDir, "intermediates/apk/debug/app-debug.apk").delete()
     }
 }
