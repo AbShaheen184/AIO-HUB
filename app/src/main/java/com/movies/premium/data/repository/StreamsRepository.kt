@@ -4,6 +4,7 @@ import com.movies.premium.data.remote.api.ChqApi
 import com.movies.premium.data.remote.model.ChqStream
 import com.movies.premium.data.remote.model.ChqStreamItem
 import com.movies.premium.data.remote.model.ChqStreamsResponse
+import com.movies.premium.data.remote.model.ChqStreamResponse
 import com.movies.premium.util.Logger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -48,6 +49,10 @@ class StreamsRepository @Inject constructor(
     /**
      * Fetches streams from all providers and returns the merged,
      * de-duplicated list. [imdbId] is only used by the legacy torrent provider.
+     *
+     * Each provider is called independently in parallel. A slow provider never
+     * blocks fast ones. This mirrors the original app's behaviour of calling
+     * each provider directly rather than through a slow aggregate endpoint.
      */
     suspend fun fetchAll(
         tmdbId: Int,
@@ -55,60 +60,82 @@ class StreamsRepository @Inject constructor(
         season: Int? = null,
         episode: Int? = null,
         imdbId: String? = null,
+        token: String? = null,
     ): List<ChqStream> {
         val id = tmdbId.toString()
         val hasEpisode = (season ?: 0) > 0 && (episode ?: 0) > 0
 
+        // Map the app's mediaType ("movie"/"tv") to the server's expected type
+        // ("movie"/"series"). The server's per-provider routes use this in the URL path.
+        val serverType = if (mediaType == "tv") "series" else "movie"
+
         // A series is only resolvable per episode: the backend looks a bare id up
         // in its *movie* table and answers with a completely different title, so
         // asking without a season and an episode would return the wrong film.
-        // But for the TMDB-Embed-API, the /series/{id} route is the correct one
-        // for TV shows too, so we always try it instead of bouncing to the
-        // movie route — especially when no episode is selected yet.
-        if (mediaType == "tv" && !hasEpisode) {
-            Logger.d(TAG, "No episode chosen for tv id=$id — asking series endpoint without episode query params")
+        // For TV shows without a specific episode, default to S1E1 so the backend
+        // has a concrete episode to resolve sources for.
+        val effectiveSeason = if (mediaType == "tv" && !hasEpisode) 1 else season
+        val effectiveEpisode = if (mediaType == "tv" && !hasEpisode) 1 else episode
+        val effectiveHasEpisode = (effectiveSeason ?: 0) > 0 && (effectiveEpisode ?: 0) > 0
+
+        if (mediaType == "tv" && !effectiveHasEpisode) {
+            Logger.d(TAG, "No episode chosen for tv id=$id — nothing to resolve")
+            return emptyList()
         }
 
         // The providers the user switched off in the settings are not asked.
         val disabled = disabledProviders()
 
-        val current = try {
-            val res = if (mediaType == "movie") {
-                // Movies: the movie endpoint is the correct route; use it.
-                api.getMovieStreams(id)
-            } else {
-                // TV series and any other type: use the tv endpoint. The movie
-                // endpoint is wrong for TV (it answers with a different title).
-                // No season/episode -> ask the tv overview endpoint without query params.
-                if (hasEpisode) {
-                    api.getTvStreams(id, season ?: 0, episode ?: 0)
-                } else {
-                    // Series overview: no episode selected. Default season/episode
-                    // to 0, which the backend treats as "overview" mode.
-                    api.getTvStreams(id, 0, 0)
+        // Parallel per-provider fetching. Each provider is called independently
+        // in parallel. A slow provider never blocks fast ones. This mirrors the
+        // original app's behaviour of calling each provider directly rather than
+        // through a slow aggregate endpoint that fans out to 60+ providers.
+        val merged = supervisorScope {
+            val results = buildList {
+                for (provider in CURRENT_PROVIDERS) {
+                    if (provider in disabled) continue
+                    add(async {
+                        try {
+                            val streams = if (effectiveHasEpisode) {
+                                api.getStreamsFromProviderForEpisode(
+                                    provider, serverType, id,
+                                    effectiveSeason ?: 0, effectiveEpisode ?: 0, token
+                                )
+                            } else {
+                                api.getStreamsFromProvider(
+                                    provider, serverType, id,
+                                    effectiveSeason, effectiveEpisode, token
+                                )
+                            }
+                            ProviderResult(provider, streams.toStreams())
+                        } catch (e: Exception) {
+                            Logger.d(TAG, "Provider '$provider' failed: ${e.message}")
+                            ProviderResult(provider, emptyList(), e.message)
+                        }
+                    })
+                }
+            }.awaitAll()
+
+            val merged = LinkedHashMap<String, ChqStream>()
+            for (result in results) {
+                val streams = result.streams.orEmpty()
+                for (stream in streams) {
+                    val url = stream.url ?: continue
+                    val label = stream.name?.takeIf { it.isNotBlank() } ?: result.provider
+                    val key = "$label|$url"
+                    if (!merged.containsKey(key)) {
+                        merged[key] = if (stream.name.isNullOrBlank()) {
+                            stream.copy(name = result.provider)
+                        } else {
+                            stream
+                        }
+                    }
                 }
             }
-            if (res.isSuccessful) {
-                res.body()?.streams.orEmpty().map { it.normalize() } ?: emptyList()
-            } else {
-                Logger.d(TAG, "TMDB-Embed-API HTTP ${res.code()} for id=$id — trying fallback routes")
-                emptyList()
-            }
-        } catch (e: Exception) {
-            Logger.d(TAG, "TMDB-Embed-API route failed for id=$id: ${e.message} — trying fallback routes")
-            try {
-                val response = if (hasEpisode) {
-                    api.getAllStreamsForEpisode(id, season ?: 0, episode ?: 0)
-                } else {
-                    api.getAllStreams(id)
-                }
-                response.toStreams()
-            } catch (_: Exception) {
-                return fetchLegacy(tmdbId, mediaType, season, episode, imdbId, disabled)
-            }
+            merged.values.toList()
         }
 
-        val enabled = current.filter { it.provider !in disabled }
+        val enabled = merged.filter { it.provider !in disabled }
 
         if (enabled.isEmpty() && hasLegacyFallback(mediaType, season, episode)) {
             Logger.d(TAG, "New stream route returned nothing for id=$id — trying the legacy routes")
@@ -116,7 +143,7 @@ class StreamsRepository @Inject constructor(
             if (legacy.isNotEmpty()) return legacy
         }
 
-        Logger.i(TAG, "Resolved ${enabled.size} streams for tmdb=$id type=$mediaType")
+        Logger.i(TAG, "Resolved ${enabled.size} streams for tmdb=$id type=$serverType")
         return enabled
     }
 
@@ -127,10 +154,14 @@ class StreamsRepository @Inject constructor(
         mediaType: String = "movie",
         season: Int? = null,
         episode: Int? = null,
+        token: String? = null,
     ): List<ChqStream> {
         val id = tmdbId.toString()
         val hasEpisode = (season ?: 0) > 0 && (episode ?: 0) > 0
         if (mediaType == "tv" && !hasEpisode) return emptyList()
+
+        // Map mediaType to server's expected type
+        val serverType = if (mediaType == "tv") "series" else "movie"
 
         // A provider the user switched off is not asked for its sources.
         if (provider in disabledProviders()) {
@@ -141,9 +172,15 @@ class StreamsRepository @Inject constructor(
         return try {
             if (provider in CURRENT_PROVIDERS) {
                 val response = if (hasEpisode) {
-                    api.getStreamsFromProviderForEpisode(provider, id, season ?: 0, episode ?: 0)
+                    api.getStreamsFromProviderForEpisode(
+                        provider, serverType, id,
+                        season ?: 0, episode ?: 0, token
+                    )
                 } else {
-                    api.getStreamsFromProvider(provider, id)
+                    api.getStreamsFromProvider(
+                        provider, serverType, id,
+                        season, episode, token
+                    )
                 }
                 response.toStreams()
             } else {
@@ -242,7 +279,7 @@ class StreamsRepository @Inject constructor(
             api.getTorrentioStreams(imdbId, mediaType, season, episode).streams.orEmpty(),
         )
     } catch (e: Exception) {
-        Logger.d(TAG, "Legacy provider 'torrentio' failed: ${e.message}")
+        Logger.d(TAG, "Legacy torrent provider failed: ${e.message}")
         ProviderResult("torrentio", emptyList(), e.message)
     }
 
@@ -306,12 +343,32 @@ class StreamsRepository @Inject constructor(
         private const val TAG = "StreamsRepo"
 
         /**
-         * The providers the current backend fans out over.
+         * The providers the current backend fans out over via per-provider routes.
          *
-         * The backend rejects any other name with
-         * `{"error":"Invalid provider. Use one of: notorrent, nebula, hdhub, vidrock"}`.
+         * These are CHQ provider names that exist on the backend (queried from
+         * /api/providers). We call these providers independently in parallel as a
+         * fallback when the aggregate route is too slow through Cloudflare Tunnel.
          */
-        val CURRENT_PROVIDERS = listOf("notorrent", "nebula", "hdhub", "vidrock")
+        val CURRENT_PROVIDERS = listOf(
+            "showbox",
+            "castletv",
+            "mapple",
+            "meowtv",
+            "movix",
+            "noxpulse",
+            "playimdb",
+            "streamflix",
+            "vaplayer",
+            "vidbolt",
+            "vidbox",
+            "vidlink",
+            "vixsrc",
+            "a111477",
+            "bower",
+            "byse",
+            "barbarian",
+            "4khdhub",
+        )
 
         /** The keys of the original's per-provider routes, in the original's order. */
         private val LEGACY_PROVIDERS = listOf(
@@ -358,30 +415,30 @@ class StreamsRepository @Inject constructor(
 }
 
 /**
- * Calls one of the original's per-provider routes.
- *
- * The original's `ChqApi` declares a separate method per provider; this is the
- * same set of routes behind one name, so the repository does not have to repeat
- * the whole `when`.
+ * Legacy per-provider routes for the original's CHQ API.
+ * Maps provider names to the corresponding API method.
  */
 private suspend fun ChqApi.getLegacyStreams(
     provider: String,
-    id: String,
+    tmdbId: String,
     mediaType: String,
     season: Int?,
     episode: Int?,
-): com.movies.premium.data.remote.model.ChqStreamResponse = when (provider) {
-    "multiembed" -> getMultiEmbedStreams(id, mediaType, season, episode)
-    "vidzee" -> getVidzeeStreams(id, mediaType, season, episode)
-    "vidrock" -> getVidrockStreams(id, mediaType, season, episode)
-    "fmovies" -> getFmoviesStreams(id, mediaType, season, episode)
-    "vixsrc" -> getVixsrcStreams(id, mediaType, season, episode)
-    "primesrc" -> getPrimesrcStreams(id, mediaType, season, episode)
-    "twoembed" -> getTwoembedStreams(id, mediaType, season, episode)
-    "vidsrc" -> getVidsrcStreams(id, mediaType, season, episode)
-    "4khd" -> get4khdStreams(id, mediaType, season, episode)
-    "kmmovies" -> getKmmoviesStreams(id, mediaType, season, episode)
-    "moviesmod" -> getMoviesmodStreams(id, mediaType, season, episode)
-    "uhdmovies" -> getUhdmoviesStreams(id, mediaType, season, episode)
-    else -> throw IllegalArgumentException("Unknown provider '$provider'")
+): ChqStreamResponse {
+    val type = if (mediaType == "tv") "series" else "movie"
+    return when (provider) {
+        "multiembed" -> getMultiEmbedStreams(tmdbId, type, season, episode)
+        "vidzee" -> getVidzeeStreams(tmdbId, type, season, episode)
+        "vidrock" -> getVidrockStreams(tmdbId, type, season, episode)
+        "fmovies" -> getFmoviesStreams(tmdbId, type, season, episode)
+        "vixsrc" -> getVixsrcStreams(tmdbId, type, season, episode)
+        "primesrc" -> getPrimesrcStreams(tmdbId, type, season, episode)
+        "twoembed" -> getTwoembedStreams(tmdbId, type, season, episode)
+        "vidsrc" -> getVidsrcStreams(tmdbId, type, season, episode)
+        "4khd" -> get4khdStreams(tmdbId, type, season, episode)
+        "kmmovies" -> getKmmoviesStreams(tmdbId, type, season, episode)
+        "moviesmod" -> getMoviesmodStreams(tmdbId, type, season, episode)
+        "uhdmovies" -> getUhdmoviesStreams(tmdbId, type, season, episode)
+        else -> throw IllegalArgumentException("Unknown legacy provider '$provider'")
+    }
 }
