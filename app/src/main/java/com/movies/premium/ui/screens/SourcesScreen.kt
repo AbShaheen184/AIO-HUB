@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -165,7 +166,10 @@ fun SourcesScreen(
                             )
                         }
 
-                        items(state.sources, key = { it.stream.url ?: it.stream.hashCode().toString() }) { source ->
+                        itemsIndexed(
+                            items = state.sources,
+                            key = { index, _ -> "$index" },
+                        ) { _, source ->
                             SourceRow(
                                 source = source,
                                 isDownload = isDownload,
@@ -243,7 +247,7 @@ private fun SourceRow(
         ) {
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = stream.name?.takeIf { it.isNotBlank() } ?: "Source",
@@ -255,14 +259,34 @@ private fun SourceRow(
                 Text(
                     text = buildString {
                         stream.quality?.takeIf { it.isNotBlank() }?.let { append(it) }
-                        stream.size?.takeIf { it.isNotBlank() }?.let {
+                        stream.format?.takeIf { it.isNotBlank() }?.let {
+                            if (isNotEmpty()) append(" • ")
+                            append(it.uppercase())
+                        }
+                        stream.type?.takeIf { it.isNotBlank() }?.let {
+                            if (isNotEmpty()) append(" • ")
+                            append(it.uppercase())
+                        }
+                        stream.language?.takeIf { it.isNotBlank() }?.let {
                             if (isNotEmpty()) append(" • ")
                             append(it)
                         }
-                        source.sizeBytes?.let {
+                        stream.provider?.takeIf { it.isNotBlank() }?.let {
                             if (isNotEmpty()) append(" • ")
-                            append(formatSize(it))
+                            append(it.capitalize())
                         }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = buildString {
+                        val sizeStr = source.sizeBytes?.let { formatSize(it) }
+                            ?: stream.size?.takeIf { it.isNotBlank() }
+                            ?: "Size unknown"
+                        append(sizeStr)
                         stream.seeders?.let {
                             if (isNotEmpty()) append(" • ")
                             append("$it seeders")
@@ -273,10 +297,23 @@ private fun SourceRow(
                         }
                     },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (source.available) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                stream.description?.takeIf { it.isNotBlank() }?.let { desc ->
+                    Text(
+                        text = desc.take(120),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             Box(
