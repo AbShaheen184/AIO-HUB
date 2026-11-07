@@ -212,13 +212,10 @@ fun PlayerScreen(
                         android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
                         -> {
                             // While the controls are on, the "ok" belongs to
-                            // the button that has the focus.
-                            if (!uiState.showControls) {
-                                viewModel.toggleControls()
-                                true
-                            } else {
-                                false
-                            }
+                            // the button that has the focus. Toggle play/pause
+                            // so the remote's select button always works.
+                            if (uiState.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                            true
                         }
 
                         android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
@@ -228,6 +225,26 @@ fun PlayerScreen(
 
                         android.view.KeyEvent.KEYCODE_MEDIA_STOP -> {
                             exoPlayer.pause()
+                            true
+                        }
+
+                        android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                            exoPlayer.seekTo(exoPlayer.currentPosition + 30_000L)
+                            true
+                        }
+
+                        android.view.KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                            exoPlayer.seekTo((exoPlayer.currentPosition - 30_000L).coerceAtLeast(0L))
+                            true
+                        }
+
+                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                            exoPlayer.seekTo((exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L))
+                            true
+                        }
+
+                        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            exoPlayer.seekTo(exoPlayer.currentPosition + 10_000L)
                             true
                         }
 
