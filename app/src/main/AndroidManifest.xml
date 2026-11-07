@@ -92,12 +92,12 @@
     </queries>
 
     <permission
-        android:name="com.movies.premium.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:name="com.aiohub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.movies.premium.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+    <uses-permission android:name="com.aiohub.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
 
     <application
-        android:name=".CinemaHQApp"
+        android:name=".AioHubApp"
         android:allowBackup="true"
         android:banner="@mipmap/ic_banner"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -136,7 +136,7 @@
           `libretrowrapper.so` exports JNI symbols bound to that exact name.
         -->
         <activity
-            android:name="com.movies.premium.emulator.EmulatorActivity"
+            android:name="com.aiohub.emulator.EmulatorActivity"
             android:configChanges="keyboard|keyboardHidden|navigation|orientation|screenLayout|screenSize|smallestScreenSize"
             android:exported="false"
             android:screenOrientation="landscape"
@@ -144,7 +144,7 @@
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.movies.premium.provider"
+            android:authorities="com.aiohub.provider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

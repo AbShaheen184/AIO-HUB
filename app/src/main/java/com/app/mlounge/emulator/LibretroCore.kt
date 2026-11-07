@@ -2,8 +2,8 @@ package com.app.mlounge.emulator
 
 import android.content.Context
 import android.util.Log
-import com.movies.premium.emulator.LibretroBridge
-import com.movies.premium.emulator.LibretroNative
+import com.aiohub.emulator.LibretroBridge
+import com.aiohub.emulator.LibretroNative
 
 /**
  * Thin JNI shim around the prebuilt `libretrowrapper.so`.

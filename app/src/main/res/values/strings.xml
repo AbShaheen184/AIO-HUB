@@ -151,7 +151,7 @@
     <string name="google_api_key">AIzaSyD3E5ymNqoLtr8cbpFrm9R3s9GJZl10NME</string>
     <string name="google_app_id">1:445072119404:android:7b1ca146d59c104472aa49</string>
     <string name="google_crash_reporting_api_key">AIzaSyD3E5ymNqoLtr8cbpFrm9R3s9GJZl10NME</string>
-    <string name="google_storage_bucket">cinemahq-kotlin.firebasestorage.app</string>
+    <string name="google_storage_bucket">aiohub-kotlin.firebasestorage.app</string>
     <string name="hide_bottom_view_on_scroll_behavior">com.google.android.material.behavior.HideBottomViewOnScrollBehavior</string>
     
     <string name="m3_ref_typeface_brand_medium">sans-serif-medium</string>
@@ -255,7 +255,7 @@
     <string name="path_password_eye_mask_strike_through">M2,4.27 L19.73,22 L22.27,19.46 L4.54,1.73 L4.54,1 L23,1 L23,23 L1,23 L1,4.27 Z</string>
     <string name="path_password_eye_mask_visible">M2,4.27 L2,4.27 L4.54,1.73 L4.54,1.73 L4.54,1 L23,1 L23,23 L1,23 L1,4.27 Z</string>
     <string name="path_password_strike_through">M3.27,4.27 L19.74,20.74</string>
-    <string name="project_id">cinemahq-kotlin</string>
+    <string name="project_id">aiohub-kotlin</string>
     
     
     

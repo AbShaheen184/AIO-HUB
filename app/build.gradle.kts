@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.movies.premium"
+    namespace = "com.aiohub"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.movies.premium"
+        applicationId = "com.aiohub"
         minSdk = 24
         targetSdk = 36
         versionCode = 806
