@@ -27,20 +27,23 @@ interface ChqApi {
     @GET("api/streams/movie/{id}")
     suspend fun getMovieStreams(
         @Path("id") tmdbId: String,
+        @Query("token") token: String? = null,
     ): Response<ChqStreamResponse>
 
     /** TV Series streams from TMDB-Embed-API backend. */
     @GET("api/streams/series/{id}")
     suspend fun getTvStreams(
         @Path("id") tmdbId: String,
-        @Query("s") season: Int = 0,
-        @Query("e") episode: Int = 0,
+        @Query("season") season: Int = 0,
+        @Query("episode") episode: Int = 0,
+        @Query("token") token: String? = null,
     ): Response<ChqStreamResponse>
 
     /** Every provider, for a movie (legacy/multi route). */
     @GET("api/streams/{id}")
     suspend fun getAllStreams(
         @Path("id") id: String,
+        @Query("token") token: String? = null,
     ): ChqStreamsResponse
 
     /** Every provider, for one episode of a series (legacy/multi route). */
@@ -49,22 +52,29 @@ interface ChqApi {
         @Path("id") id: String,
         @Path("season") season: Int,
         @Path("episode") episode: Int,
+        @Query("token") token: String? = null,
     ): ChqStreamsResponse
 
     /** One provider, for a movie. */
-    @GET("api/streams/{provider}/{id}")
+    @GET("api/streams/{provider}/{type}/{id}")
     suspend fun getStreamsFromProvider(
         @Path("provider") provider: String,
+        @Path("type") type: String,
         @Path("id") id: String,
+        @Query("season") season: Int? = null,
+        @Query("episode") episode: Int? = null,
+        @Query("token") token: String? = null,
     ): ChqStreamsResponse
 
     /** One provider, for one episode of a series. */
-    @GET("api/streams/{provider}/{id}/{season}/{episode}")
+    @GET("api/streams/{provider}/{type}/{id}")
     suspend fun getStreamsFromProviderForEpisode(
         @Path("provider") provider: String,
+        @Path("type") type: String,
         @Path("id") id: String,
-        @Path("season") season: Int,
-        @Path("episode") episode: Int,
+        @Query("season") season: Int,
+        @Query("episode") episode: Int,
+        @Query("token") token: String? = null,
     ): ChqStreamsResponse
 
     // --- The legacy per-provider routes --------------------------------------

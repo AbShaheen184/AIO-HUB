@@ -41,6 +41,8 @@ data class ChqStream(
     @SerializedName("type") val type: String? = null,
     @SerializedName("stream_type") val streamType: String? = null,
     @SerializedName("size") val size: String? = null,
+    @SerializedName("language") val language: String? = null,
+    @SerializedName("format") val format: String? = null,
     @SerializedName("seeders") val seeders: Int? = null,
     @SerializedName("info_hash", alternate = ["infoHash"]) val infoHash: String? = null,
     @SerializedName("file_index", alternate = ["fileIdx"]) val fileIdx: Int? = null,
