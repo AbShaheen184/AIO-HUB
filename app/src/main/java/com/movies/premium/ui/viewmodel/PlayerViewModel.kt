@@ -24,6 +24,7 @@ import com.movies.premium.data.remote.ntv.NtvStreamExtractor
 import com.movies.premium.data.remote.ntv.NtvStreamResult
 import com.movies.premium.data.remote.ntv.NtvUriParts
 import com.movies.premium.data.repository.StreamsRepository
+import com.movies.premium.di.STREAM_TOKEN
 import com.movies.premium.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -435,6 +436,7 @@ class PlayerViewModel @Inject constructor(
                     mediaType = contentType.ifBlank { "movie" },
                     season = season.takeIf { it > 0 },
                     episode = episode.takeIf { it > 0 },
+                    token = STREAM_TOKEN,
                 )
             }.getOrDefault(emptyList())
 
@@ -1486,6 +1488,7 @@ class PlayerViewModel @Inject constructor(
                     mediaType = contentType.ifBlank { "movie" },
                     season = season.takeIf { it > 0 },
                     episode = number.takeIf { it > 0 },
+                    token = STREAM_TOKEN,
                 )
             }.getOrDefault(emptyList())
             if (fetched.isEmpty()) {
@@ -1531,6 +1534,7 @@ class PlayerViewModel @Inject constructor(
                         mediaType = contentType.ifBlank { "tv" },
                         season = next.season.takeIf { it > 0 },
                         episode = next.episode.takeIf { it > 0 },
+                        token = STREAM_TOKEN,
                     )
                 }.getOrDefault(emptyList())
                 if (fetched.isEmpty()) {

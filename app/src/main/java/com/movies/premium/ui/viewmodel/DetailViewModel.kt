@@ -17,6 +17,7 @@ import com.movies.premium.data.remote.model.TmdbTvShow
 import com.movies.premium.data.remote.model.TmdbVideos
 import com.movies.premium.data.repository.StreamsRepository
 import com.movies.premium.data.repository.TmdbRepository
+import com.movies.premium.di.STREAM_TOKEN
 import com.movies.premium.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -206,6 +207,7 @@ class DetailViewModel @Inject constructor(
                     tmdbId = mediaId,
                     mediaType = mediaType,
                     imdbId = imdbId,
+                    token = STREAM_TOKEN,
                 )
                 _uiState.value = _uiState.value.copy(
                     streams = streams,

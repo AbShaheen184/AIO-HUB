@@ -12,11 +12,16 @@ import com.movies.premium.data.repository.AnimeRepository
 import com.movies.premium.data.repository.ProviderPreferences
 import com.movies.premium.data.repository.SourceCatalog
 import com.movies.premium.data.repository.StreamsRepository
+import com.movies.premium.di.STREAM_TOKEN
 import com.movies.premium.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -190,21 +195,60 @@ class SourcesViewModel @Inject constructor(
      * Every stream is probed for availability and for its size; the original
      * runs the two probes behind two independent `Semaphore(4)` gates.
      */
+    /**
+     * Resolves the streams of a movie or a series through the CHQ providers.
+     *
+     * Streams are returned immediately without waiting for probes; each stream is
+     * probed in the background and the UI updates as probes complete. This keeps
+     * the screen responsive even when some providers are slow.
+     */
     private suspend fun loadProviderSources(): List<ResolvedSource> {
         val streams = streamsRepository.fetchAll(
             tmdbId = tmdbId,
             mediaType = type,
             season = season.takeIf { it > 0 },
             episode = episode.takeIf { it > 0 },
+            token = STREAM_TOKEN,
         )
-        return coroutineScope {
-            streams.map { stream ->
-                async {
-                    val alive = probe.isAlive(stream)
-                    val size = probe.sizeOf(stream)
-                    ResolvedSource(stream, sizeBytes = size, available = alive)
+        val resolved = streams.map { stream ->
+            ResolvedSource(stream, sizeBytes = null, available = true)
+        }
+        // Probe in the background; results update the UI as they complete.
+        scope.launch {
+            probeAll(resolved)
+        }
+        return resolved
+    }
+
+    /**
+     * Probes every stream for availability and size in the background, publishing
+     * updates as each probe completes so the screen stays responsive.
+     */
+    private suspend fun probeAll(sources: List<ResolvedSource>) {
+        val sizeSemaphore = Semaphore(4)
+        sources.forEach { source ->
+            scope.launch {
+                try {
+                    val alive = withContext(Dispatchers.IO) { probe.isAlive(source.stream) }
+                    val size = withContext(Dispatchers.IO) { probe.sizeOf(source.stream) }
+                    _uiState.value = _uiState.value.copy(
+                        sources = _uiState.value.sources.map { s ->
+                            if (s.stream.url == source.stream.url) {
+                                s.copy(sizeBytes = size, available = alive)
+                            } else s
+                        },
+                    )
+                } catch (e: Exception) {
+                    Logger.d(TAG, "Probe failed for ${source.stream.url}: ${e.message}")
+                    _uiState.value = _uiState.value.copy(
+                        sources = _uiState.value.sources.map { s ->
+                            if (s.stream.url == source.stream.url) {
+                                s.copy(available = false)
+                            } else s
+                        },
+                    )
                 }
-            }.awaitAll()
+            }
         }
     }
 
