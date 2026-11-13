@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
@@ -164,21 +165,20 @@ class SourcesViewModel @Inject constructor(
 
     fun load() {
         scope.launch {
-            _uiState.value = _uiState.value.copy(loading = true, error = null)
+            _uiState.value = SourcesUiState(loading = true, error = null)
             try {
-                val resolved = if (type == "anime") {
-                    loadAnimeSources()
+                if (type == "anime") {
+                    val resolved = loadAnimeSources()
+                    if (resolved.isEmpty()) {
+                        _uiState.value = SourcesUiState(loading = false, error = "No sources available")
+                    } else {
+                        _uiState.value = SourcesUiState(loading = false, sources = resolved)
+                    }
                 } else {
+                    // Sources are published provider by provider, so the list fills
+                    // in while the slower providers are still answering.
                     loadProviderSources()
                 }
-                if (resolved.isEmpty()) {
-                    _uiState.value = SourcesUiState(loading = false, error = "No sources available")
-                    return@launch
-                }
-                _uiState.value = SourcesUiState(
-                    loading = false,
-                    sources = resolved,
-                )
             } catch (e: Exception) {
                 Logger.e(TAG, "Failed to load sources", e)
                 _uiState.value = SourcesUiState(
@@ -192,32 +192,52 @@ class SourcesViewModel @Inject constructor(
     /**
      * Resolves the streams of a movie or a series through the CHQ providers.
      *
-     * Every stream is probed for availability and for its size; the original
-     * runs the two probes behind two independent `Semaphore(4)` gates.
+     * Results are applied as each provider answers instead of after the last one,
+     * and every new source is probed in the background, so the screen waits for
+     * neither the slowest provider nor the probes.
      */
-    /**
-     * Resolves the streams of a movie or a series through the CHQ providers.
-     *
-     * Streams are returned immediately without waiting for probes; each stream is
-     * probed in the background and the UI updates as probes complete. This keeps
-     * the screen responsive even when some providers are slow.
-     */
-    private suspend fun loadProviderSources(): List<ResolvedSource> {
-        val streams = streamsRepository.fetchAll(
-            tmdbId = tmdbId,
-            mediaType = type,
-            season = season.takeIf { it > 0 },
-            episode = episode.takeIf { it > 0 },
-            token = STREAM_TOKEN,
-        )
-        val resolved = streams.map { stream ->
-            ResolvedSource(stream, sizeBytes = null, available = true)
+    private suspend fun loadProviderSources() {
+        var received = 0
+        try {
+            streamsRepository.fetchAllProgressive(
+                tmdbId = tmdbId,
+                mediaType = type,
+                season = season.takeIf { it > 0 },
+                episode = episode.takeIf { it > 0 },
+                token = STREAM_TOKEN,
+            ).collect { result ->
+                val incoming = result.streams.map { stream ->
+                    ResolvedSource(stream, sizeBytes = null, available = true)
+                }
+                if (incoming.isEmpty()) return@collect
+                received += incoming.size
+                addSources(incoming)
+                probeAll(incoming)
+            }
+        } catch (e: Exception) {
+            // A failure must not wipe the sources that are already on screen.
+            if (received == 0) throw e
+            Logger.e(TAG, "Stream lookup stopped after $received sources", e)
         }
-        // Probe in the background; results update the UI as they complete.
-        scope.launch {
-            probeAll(resolved)
+        when {
+            received == 0 ->
+                _uiState.value = SourcesUiState(loading = false, error = "No sources available")
+
+            _uiState.value.loading ->
+                _uiState.value = _uiState.value.copy(loading = false)
         }
-        return resolved
+    }
+
+    /** Appends sources that are not on screen yet, keeping the existing order. */
+    private fun addSources(incoming: List<ResolvedSource>) {
+        val current = _uiState.value
+        val known = current.sources.mapNotNull { it.stream.url }.toHashSet()
+        val fresh = incoming.filter { source ->
+            val url = source.stream.url ?: return@filter false
+            known.add(url)
+        }
+        if (fresh.isEmpty()) return
+        _uiState.value = current.copy(loading = false, sources = current.sources + fresh)
     }
 
     /**

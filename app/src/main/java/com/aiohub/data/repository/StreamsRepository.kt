@@ -6,12 +6,19 @@ import com.aiohub.data.remote.model.ChqStreamItem
 import com.aiohub.data.remote.model.ChqStreamsResponse
 import com.aiohub.data.remote.model.ChqStreamResponse
 import com.aiohub.util.Logger
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -62,6 +69,42 @@ class StreamsRepository @Inject constructor(
         imdbId: String? = null,
         token: String? = null,
     ): List<ChqStream> {
+        val merged = LinkedHashMap<String, ChqStream>()
+        fetchAllProgressive(tmdbId, mediaType, season, episode, imdbId, token).collect { result ->
+            for (stream in result.streams) {
+                val url = stream.url ?: continue
+                val label = stream.name?.takeIf { it.isNotBlank() } ?: result.provider
+                val key = "$label|$url"
+                if (!merged.containsKey(key)) {
+                    merged[key] = if (stream.name.isNullOrBlank()) {
+                        stream.copy(name = result.provider)
+                    } else {
+                        stream
+                    }
+                }
+            }
+        }
+        Logger.i(TAG, "Resolved ${merged.size} streams for tmdb=$tmdbId")
+        return merged.values.toList()
+    }
+
+    /**
+     * Same fan-out as [fetchAll], but emits one [ProviderResult] per provider as
+     * soon as that provider answers.
+     *
+     * The sources screen collects this flow, so the first provider's mirrors are
+     * on screen while the remaining providers are still being asked. The flow
+     * completes once every provider has answered (or failed), and only then
+     * falls back to the legacy routes when nothing was found at all.
+     */
+    fun fetchAllProgressive(
+        tmdbId: Int,
+        mediaType: String = "movie",
+        season: Int? = null,
+        episode: Int? = null,
+        imdbId: String? = null,
+        token: String? = null,
+    ): Flow<ProviderResult> = channelFlow {
         val id = tmdbId.toString()
         val hasEpisode = (season ?: 0) > 0 && (episode ?: 0) > 0
 
@@ -72,79 +115,54 @@ class StreamsRepository @Inject constructor(
         // A series is only resolvable per episode: the backend looks a bare id up
         // in its *movie* table and answers with a completely different title, so
         // asking without a season and an episode would return the wrong film.
-        // For TV shows without a specific episode, default to S1E1 so the backend
-        // has a concrete episode to resolve sources for.
         val effectiveSeason = if (mediaType == "tv" && !hasEpisode) 1 else season
         val effectiveEpisode = if (mediaType == "tv" && !hasEpisode) 1 else episode
         val effectiveHasEpisode = (effectiveSeason ?: 0) > 0 && (effectiveEpisode ?: 0) > 0
 
         if (mediaType == "tv" && !effectiveHasEpisode) {
             Logger.d(TAG, "No episode chosen for tv id=$id — nothing to resolve")
-            return emptyList()
+            return@channelFlow
         }
 
         // The providers the user switched off in the settings are not asked.
         val disabled = disabledProviders()
+        val providers = CURRENT_PROVIDERS.filter { it !in disabled }
+        val found = AtomicInteger(0)
 
-        // Parallel per-provider fetching. Each provider is called independently
-        // in parallel. A slow provider never blocks fast ones. This mirrors the
-        // original app's behaviour of calling each provider directly rather than
-        // through a slow aggregate endpoint that fans out to 60+ providers.
-        val merged = supervisorScope {
-            val results = buildList {
-                for (provider in CURRENT_PROVIDERS) {
-                    if (provider in disabled) continue
-                    add(async {
-                        try {
-                            val streams = if (effectiveHasEpisode) {
-                                api.getStreamsFromProviderForEpisode(
-                                    provider, serverType, id,
-                                    effectiveSeason ?: 0, effectiveEpisode ?: 0, token
-                                )
-                            } else {
-                                api.getStreamsFromProvider(
-                                    provider, serverType, id,
-                                    effectiveSeason, effectiveEpisode, token
-                                )
-                            }
-                            ProviderResult(provider, streams.toStreams())
-                        } catch (e: Exception) {
-                            Logger.d(TAG, "Provider '$provider' failed: ${e.message}")
-                            ProviderResult(provider, emptyList(), e.message)
-                        }
-                    })
-                }
-            }.awaitAll()
-
-            val merged = LinkedHashMap<String, ChqStream>()
-            for (result in results) {
-                val streams = result.streams.orEmpty()
-                for (stream in streams) {
-                    val url = stream.url ?: continue
-                    val label = stream.name?.takeIf { it.isNotBlank() } ?: result.provider
-                    val key = "$label|$url"
-                    if (!merged.containsKey(key)) {
-                        merged[key] = if (stream.name.isNullOrBlank()) {
-                            stream.copy(name = result.provider)
+        // Every provider runs in its own coroutine and every failure is caught, so
+        // a provider that is down only removes its own entries. Each result is
+        // sent the moment that provider finishes.
+        supervisorScope {
+            providers.forEach { provider ->
+                launch(Dispatchers.IO) {
+                    val result = try {
+                        val streams = if (effectiveHasEpisode) {
+                            api.getStreamsFromProviderForEpisode(
+                                provider, serverType, id,
+                                effectiveSeason ?: 0, effectiveEpisode ?: 0, token
+                            )
                         } else {
-                            stream
+                            api.getStreamsFromProvider(
+                                provider, serverType, id,
+                                effectiveSeason, effectiveEpisode, token
+                            )
                         }
+                        ProviderResult(provider, streams.toStreams())
+                    } catch (e: Exception) {
+                        Logger.d(TAG, "Provider '$provider' failed: ${e.message}")
+                        ProviderResult(provider, emptyList(), e.message)
                     }
+                    found.addAndGet(result.streams.size)
+                    send(result)
                 }
             }
-            merged.values.toList()
         }
 
-        val enabled = merged.filter { it.provider !in disabled }
-
-        if (enabled.isEmpty() && hasLegacyFallback(mediaType, season, episode)) {
+        if (found.get() == 0 && hasLegacyFallback(mediaType, season, episode)) {
             Logger.d(TAG, "New stream route returned nothing for id=$id — trying the legacy routes")
             val legacy = fetchLegacy(tmdbId, mediaType, season, episode, imdbId, disabled)
-            if (legacy.isNotEmpty()) return legacy
+            if (legacy.isNotEmpty()) send(ProviderResult("legacy", legacy))
         }
-
-        Logger.i(TAG, "Resolved ${enabled.size} streams for tmdb=$id type=$serverType")
-        return enabled
     }
 
     /** Resolves a single provider, used by the provider-picker sheet. */
