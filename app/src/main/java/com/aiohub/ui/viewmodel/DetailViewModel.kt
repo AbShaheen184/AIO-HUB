@@ -21,6 +21,7 @@ import com.aiohub.di.STREAM_TOKEN
 import com.aiohub.util.Logger
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -202,15 +203,39 @@ class DetailViewModel @Inject constructor(
     private fun loadStreams(imdbId: String?) {
         scope.launch {
             _uiState.value = _uiState.value.copy(loadingStreams = true)
+            val merged = LinkedHashMap<String, ChqStream>()
             try {
-                val streams = streamsRepository.fetchAll(
+                // Publish each provider's streams as it answers, so the detail
+                // screen stops "Resolving..." as soon as the first one is in.
+                streamsRepository.fetchAllProgressive(
                     tmdbId = mediaId,
                     mediaType = mediaType,
                     imdbId = imdbId,
                     token = STREAM_TOKEN,
-                )
+                ).collect { result ->
+                    var added = false
+                    for (stream in result.streams) {
+                        val url = stream.url ?: continue
+                        val label = stream.name?.takeIf { it.isNotBlank() } ?: result.provider
+                        val key = "$label|$url"
+                        if (!merged.containsKey(key)) {
+                            merged[key] = if (stream.name.isNullOrBlank()) {
+                                stream.copy(name = result.provider)
+                            } else {
+                                stream
+                            }
+                            added = true
+                        }
+                    }
+                    if (added) {
+                        _uiState.value = _uiState.value.copy(
+                            streams = merged.values.toList(),
+                            loadingStreams = false,
+                        )
+                    }
+                }
                 _uiState.value = _uiState.value.copy(
-                    streams = streams,
+                    streams = merged.values.toList(),
                     loadingStreams = false,
                     streamsResolved = true,
                 )
@@ -218,7 +243,7 @@ class DetailViewModel @Inject constructor(
                 // A failing stream lookup must not take the screen down with it.
                 Logger.e(TAG, "Failed to load the streams of $mediaId", e)
                 _uiState.value = _uiState.value.copy(
-                    streams = emptyList(),
+                    streams = merged.values.toList(),
                     loadingStreams = false,
                     streamsResolved = true,
                 )
