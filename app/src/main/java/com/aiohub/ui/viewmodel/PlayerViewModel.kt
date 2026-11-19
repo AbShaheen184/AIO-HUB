@@ -1225,6 +1225,24 @@ class PlayerViewModel @Inject constructor(
     }
 
     /**
+     * Shows the controls and, on a remote-driven interface, keeps them alive
+     * while the user navigates them.
+     */
+    fun showControls(autoHide: Boolean = true) {
+        _uiState.value = _uiState.value.copy(showControls = true)
+        if (autoHide) armControlsHide() else controlsHideJob?.cancel()
+    }
+
+    /**
+     * A key press or focus move while the controls are on screen — the
+     * auto-hide timer is restarted so the controls do not vanish under a
+     * remote control user who is still navigating them.
+     */
+    fun pokeControls() {
+        if (_uiState.value.showControls) armControlsHide()
+    }
+
+    /**
      * Hides the controls after five seconds.
      *
      * Mirrors the original's `x0` case 2.

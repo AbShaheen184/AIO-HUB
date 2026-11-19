@@ -4,11 +4,13 @@ package com.aiohub.ui.screens.player
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -43,6 +45,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
@@ -67,6 +71,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.aiohub.ui.tv.LocalIsTv
 import com.aiohub.ui.viewmodel.PlaybackRequest
 import com.aiohub.ui.viewmodel.PlayerDisplayMode
 import com.aiohub.ui.viewmodel.PlayerViewModel
@@ -107,6 +112,8 @@ fun PlayerScreen(
     val debridState by viewModel.debridState.collectAsStateWithLifecycle()
     val playbackRequest by viewModel.playbackRequest.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val isTv = LocalIsTv.current
+    val playPauseFocus = remember { FocusRequester() }
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build()
@@ -114,6 +121,24 @@ fun PlayerScreen(
 
     DisposableEffect(Unit) {
         onDispose { exoPlayer.release() }
+    }
+
+    // On a television the controls have to be reachable with a remote control:
+    // show them up front and put the focus on the play/pause button so the
+    // user has somewhere to navigate from immediately.
+    LaunchedEffect(isTv) {
+        if (isTv) {
+            viewModel.showControls()
+            delay(150)
+            runCatching { playPauseFocus.requestFocus() }
+        }
+    }
+
+    LaunchedEffect(isTv, uiState.showControls) {
+        if (isTv && uiState.showControls) {
+            delay(80)
+            runCatching { playPauseFocus.requestFocus() }
+        }
     }
 
     // The listener of the player, the original's `z0`.
@@ -198,58 +223,108 @@ fun PlayerScreen(
         modifier = modifier
             .fillMaxSize()
             .background(Color.Black)
-            // A television has no finger: the picture is brought back with
-            // the "ok" button of the remote, and the play and pause keys of
-            // the remote do what they do on any other player.
+            .focusable()
+            // Remote/keyboard input: on TV (and generally for DPAD devices) we
+            // must keep controls reachable and avoid hijacking keys needed for
+            // focus navigation while the control surface is visible.
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
-                if (native.action != android.view.KeyEvent.ACTION_DOWN) {
-                    false
-                } else {
-                    when (native.keyCode) {
-                        android.view.KeyEvent.KEYCODE_DPAD_CENTER,
-                        android.view.KeyEvent.KEYCODE_ENTER,
-                        android.view.KeyEvent.KEYCODE_NUMPAD_ENTER,
-                        -> {
-                            // While the controls are on, the "ok" belongs to
-                            // the button that has the focus. Toggle play/pause
-                            // so the remote's select button always works.
-                            if (uiState.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                            true
-                        }
+                if (native.action != KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
 
-                        android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                val controlsVisible = uiState.showControls
+                val navKey = native.keyCode in setOf(
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                )
+
+                // Any remote interaction should reveal controls on TV.
+                if (isTv && navKey) {
+                    if (!controlsVisible) {
+                        viewModel.showControls()
+                        return@onPreviewKeyEvent true
+                    } else {
+                        viewModel.pokeControls()
+                    }
+                }
+
+                when (native.keyCode) {
+                    KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        if (isTv) viewModel.pokeControls()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                        exoPlayer.play()
+                        if (isTv) viewModel.pokeControls()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_MEDIA_PAUSE, KeyEvent.KEYCODE_MEDIA_STOP -> {
+                        exoPlayer.pause()
+                        if (isTv) viewModel.pokeControls()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                        exoPlayer.seekTo(exoPlayer.currentPosition + 30_000L)
+                        if (isTv) viewModel.showControls()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                        exoPlayer.seekTo((exoPlayer.currentPosition - 30_000L).coerceAtLeast(0L))
+                        if (isTv) viewModel.showControls()
+                        true
+                    }
+
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                    -> {
+                        if (controlsVisible) {
+                            // Let the focused control handle OK/select.
+                            false
+                        } else {
                             if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                            viewModel.showControls()
                             true
                         }
+                    }
 
-                        android.view.KeyEvent.KEYCODE_MEDIA_STOP -> {
-                            exoPlayer.pause()
-                            true
-                        }
-
-                        android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
-                            exoPlayer.seekTo(exoPlayer.currentPosition + 30_000L)
-                            true
-                        }
-
-                        android.view.KeyEvent.KEYCODE_MEDIA_REWIND -> {
-                            exoPlayer.seekTo((exoPlayer.currentPosition - 30_000L).coerceAtLeast(0L))
-                            true
-                        }
-
-                        android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                        if (controlsVisible) {
+                            false
+                        } else {
                             exoPlayer.seekTo((exoPlayer.currentPosition - 10_000L).coerceAtLeast(0L))
                             true
                         }
+                    }
 
-                        android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                    KeyEvent.KEYCODE_DPAD_RIGHT -> {
+                        if (controlsVisible) {
+                            false
+                        } else {
                             exoPlayer.seekTo(exoPlayer.currentPosition + 10_000L)
                             true
                         }
-
-                        else -> false
                     }
+
+                    KeyEvent.KEYCODE_BACK -> {
+                        if (isTv && controlsVisible) {
+                            viewModel.toggleControls()
+                            true
+                        } else {
+                            false
+                        }
+                    }
+
+                    else -> false
                 }
             },
     ) {
@@ -331,6 +406,7 @@ fun PlayerScreen(
                     if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
                 },
                 onSeek = { viewModel.onSeekRequested(it) },
+                playPauseModifier = if (isTv) Modifier.focusRequester(playPauseFocus) else Modifier,
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
 
@@ -554,6 +630,7 @@ private fun PlayerBottomBar(
     seekIncrementMs: Long,
     onPlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
+    playPauseModifier: Modifier = Modifier,
     modifier: Modifier = Modifier,
 ) {
     var dragging by remember { mutableStateOf(false) }
@@ -617,7 +694,10 @@ private fun PlayerBottomBar(
                     modifier = Modifier.padding(start = 4.dp),
                 )
             }
-            IconButton(onClick = onPlayPause) {
+            IconButton(
+                onClick = onPlayPause,
+                modifier = playPauseModifier,
+            ) {
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
