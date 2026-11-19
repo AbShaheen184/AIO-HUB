@@ -23,7 +23,7 @@ import javax.inject.Named
 import javax.inject.Singleton
 
 object Endpoints {
-    const val CHQ = "https://api.shaheen-homeassistant.xyz/"
+    const val CHQ = "https://aiohub.stream/"
     const val TMDB = "https://api.themoviedb.org/3/"
     const val NTV = "https://ntv.cx/"
     const val TRAKT = "https://api.trakt.tv/"
