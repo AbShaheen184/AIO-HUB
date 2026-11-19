@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -20,6 +20,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,8 +39,18 @@ fun HomeScreen(
     onTvClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val firstSection = when {
+        state.trendingMovies.isNotEmpty() -> "trendingMovies"
+        state.trendingTvShows.isNotEmpty() -> "trendingTvShows"
+        state.popularMovies.isNotEmpty() -> "popularMovies"
+        state.popularTvShows.isNotEmpty() -> "popularTvShows"
+        state.topRatedMovies.isNotEmpty() -> "topRatedMovies"
+        else -> null
+    }
 
     if (state.loading) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -97,6 +109,7 @@ fun HomeScreen(
                     posters = state.trendingMovies.associate { it.id to posterUrl(it.posterPath) },
                     ratings = state.trendingMovies.associate { it.id to it.voteAverage },
                     onClick = onMovieClick,
+                    firstItemFocusRequester = if (firstSection == "trendingMovies") firstItemFocusRequester else null,
                 )
             }
         }
@@ -110,6 +123,7 @@ fun HomeScreen(
                     posters = state.trendingTvShows.associate { it.id to posterUrl(it.posterPath) },
                     ratings = state.trendingTvShows.associate { it.id to it.voteAverage },
                     onClick = onTvClick,
+                    firstItemFocusRequester = if (firstSection == "trendingTvShows") firstItemFocusRequester else null,
                 )
             }
         }
@@ -123,6 +137,7 @@ fun HomeScreen(
                     posters = state.popularMovies.associate { it.id to posterUrl(it.posterPath) },
                     ratings = state.popularMovies.associate { it.id to it.voteAverage },
                     onClick = onMovieClick,
+                    firstItemFocusRequester = if (firstSection == "popularMovies") firstItemFocusRequester else null,
                 )
             }
         }
@@ -136,6 +151,7 @@ fun HomeScreen(
                     posters = state.popularTvShows.associate { it.id to posterUrl(it.posterPath) },
                     ratings = state.popularTvShows.associate { it.id to it.voteAverage },
                     onClick = onTvClick,
+                    firstItemFocusRequester = if (firstSection == "popularTvShows") firstItemFocusRequester else null,
                 )
             }
         }
@@ -149,6 +165,7 @@ fun HomeScreen(
                     posters = state.topRatedMovies.associate { it.id to posterUrl(it.posterPath) },
                     ratings = state.topRatedMovies.associate { it.id to it.voteAverage },
                     onClick = onMovieClick,
+                    firstItemFocusRequester = if (firstSection == "topRatedMovies") firstItemFocusRequester else null,
                 )
             }
         }
@@ -163,6 +180,7 @@ private fun MovieRow(
     posters: Map<Int, String?>,
     ratings: Map<Int, Double>,
     onClick: (Int) -> Unit,
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     Column {
         Text(
@@ -174,12 +192,17 @@ private fun MovieRow(
             contentPadding = PaddingValues(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(ids, key = { it }) { id ->
+            itemsIndexed(ids, key = { _, id -> id }) { index, id ->
                 PosterCard(
                     posterUrl = posters[id],
                     title = titles[id].orEmpty(),
                     rating = ratings[id],
                     onClick = { onClick(id) },
+                    modifier = if (index == 0 && firstItemFocusRequester != null) {
+                        Modifier.focusRequester(firstItemFocusRequester)
+                    } else {
+                        Modifier
+                    },
                 )
             }
         }

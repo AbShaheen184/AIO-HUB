@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -47,6 +48,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -207,8 +209,28 @@ private fun CollapsibleSidebar(
     firstItemRequester: FocusRequester = remember { FocusRequester() },
     /** Asked for the focus when the drawer is closed, and at the start. */
     menuRequester: FocusRequester = remember { FocusRequester() },
+    /** First focusable item in the current screen content (TV remote handoff). */
+    contentFocusRequester: FocusRequester? = null,
 ) {
     val focusManager = LocalFocusManager.current
+    val scope = rememberCoroutineScope()
+
+    fun moveFocusToContent(prefer: FocusDirection) {
+        scope.launch {
+            // Content (especially lazy rows/grids) may not be composed/attached
+            // yet; retry briefly so the TV remote can reliably leave the menu.
+            repeat(8) {
+                val moved = contentFocusRequester?.let {
+                    runCatching { it.requestFocus() }.isSuccess
+                } == true
+                if (moved) return@launch
+                focusManager.moveFocus(prefer)
+                delay(80)
+            }
+            focusManager.moveFocus(prefer)
+        }
+    }
+
     Box(modifier = modifier) {
         if (expanded) {
             // Semi-transparent scrim covering full screen
@@ -320,13 +342,19 @@ private fun CollapsibleSidebar(
                                     // rows/grids without needing a touch.
                                     KeyEvent.KEYCODE_DPAD_RIGHT,
                                     KeyEvent.KEYCODE_DPAD_DOWN -> {
-                                        focusManager.moveFocus(
-                                            if (native.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
-                                                FocusDirection.Right
-                                            } else {
-                                                FocusDirection.Down
-                                            },
-                                        )
+                                        val movedNow = contentFocusRequester?.let {
+                                            runCatching { it.requestFocus() }.isSuccess
+                                        } == true
+                                        if (!movedNow) {
+                                            moveFocusToContent(
+                                                if (native.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                                    FocusDirection.Right
+                                                } else {
+                                                    FocusDirection.Down
+                                                },
+                                            )
+                                        }
+                                        true
                                     }
 
                                     else -> false
@@ -381,10 +409,13 @@ fun AioHubApp(
     val menuButton = remember { FocusRequester() }
     var moveFocusToMenu by remember { mutableStateOf(false) }
 
+    // First focusable content item on key screens, so the collapsed menu can
+    // hand DPAD focus into the page reliably on a television.
+    val contentFocusRequester = remember { FocusRequester() }
+
     // On a television nothing is touched, so nothing has the focus when the
-    // app starts. The user would have to guess where the cursor is, so the
-    // focus is put on the hamburger — the ring around it shows where it is,
-    // and the right button of the remote moves into the content.
+    // app starts. Start on the hamburger: it has a visible focus ring and can
+    // move into content with Right/Down.
     val isTv = LocalIsTv.current
     LaunchedEffect(isTv) {
         if (isTv) {
@@ -436,6 +467,7 @@ fun AioHubApp(
                     HomeScreen(
                         onMovieClick = { navController.navigate(Routes.movieDetail(it)) },
                         onTvClick = { navController.navigate(Routes.tvDetail(it)) },
+                        firstItemFocusRequester = contentFocusRequester,
                     )
                 }
 
@@ -443,6 +475,7 @@ fun AioHubApp(
                     BrowseScreen(
                         isTv = false,
                         onItemClick = { navController.navigate(Routes.movieDetail(it)) },
+                        firstItemFocusRequester = contentFocusRequester,
                     )
                 }
 
@@ -450,6 +483,7 @@ fun AioHubApp(
                     BrowseScreen(
                         isTv = true,
                         onItemClick = { navController.navigate(Routes.tvDetail(it)) },
+                        firstItemFocusRequester = contentFocusRequester,
                     )
                 }
 
@@ -822,6 +856,10 @@ fun AioHubApp(
         }
 
         if (showRail) {
+            val activeContentFocus = when (currentRoute) {
+                Routes.HOME, Routes.MOVIES, Routes.TV_SHOWS -> contentFocusRequester
+                else -> null
+            }
             CollapsibleSidebar(
                 destinations = destinations,
                 isSelected = { destination ->
@@ -837,6 +875,7 @@ fun AioHubApp(
                 },
                 firstItemRequester = firstRailItem,
                 menuRequester = menuButton,
+                contentFocusRequester = activeContentFocus,
                 onDestinationClick = { destination ->
                     sidebarExpanded = false
                     Routes.DETAIL_ROUTES.forEach { route ->

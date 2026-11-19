@@ -26,6 +26,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -63,6 +65,7 @@ fun BrowseScreen(
     onItemClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BrowseViewModel = hiltViewModel(),
+    firstItemFocusRequester: FocusRequester? = null,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val gridState = rememberLazyGridState()
@@ -175,24 +178,34 @@ fun BrowseScreen(
                             // The index is part of the key so that a page that
                             // repeats an id can never crash the grid.
                             key = { index, show -> "show-$index-${show.id}" },
-                        ) { _, show ->
+                        ) { index, show ->
                             PosterGridCard(
                                 posterUrl = show.posterPath?.let { TMDB_BASE + it },
                                 title = show.name ?: "",
                                 rating = show.voteAverage,
                                 onClick = { onItemClick(show.id) },
+                                modifier = if (index == 0 && firstItemFocusRequester != null) {
+                                    Modifier.focusRequester(firstItemFocusRequester)
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     } else {
                         itemsIndexed(
                             state.movies,
                             key = { index, movie -> "movie-$index-${movie.id}" },
-                        ) { _, movie ->
+                        ) { index, movie ->
                             PosterGridCard(
                                 posterUrl = movie.posterPath?.let { TMDB_BASE + it },
                                 title = movie.title ?: "",
                                 rating = movie.voteAverage,
                                 onClick = { onItemClick(movie.id) },
+                                modifier = if (index == 0 && firstItemFocusRequester != null) {
+                                    Modifier.focusRequester(firstItemFocusRequester)
+                                } else {
+                                    Modifier
+                                },
                             )
                         }
                     }
