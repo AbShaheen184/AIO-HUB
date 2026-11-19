@@ -53,14 +53,59 @@ object SourceCatalog {
     /**
      * The providers of the live CHQ routes.
      *
-     * The backend rejects every other name with
-     * `{"error":"Invalid provider. Use one of: notorrent, nebula, hdhub, vidrock"}`.
+     * Source list synced from the backend's /api/providers (MoviesTv).
      */
     val CURRENT_PROVIDERS = listOf(
-        Source("notorrent", "Notorrent", GROUP_HTTP),
-        Source("nebula", "Nebula", GROUP_HTTP),
-        Source("hdhub", "HDHub", GROUP_HTTP),
+        Source("4khdhub", "4KHDHub", GROUP_HTTP),
+        Source("a111477", "A111477", GROUP_HTTP),
+        Source("atlantic", "Atlantic", GROUP_HTTP),
+        Source("barbarian", "Barbarian", GROUP_HTTP),
+        Source("bingebang", "Bingebang", GROUP_HTTP),
+        Source("bower", "Bower", GROUP_HTTP),
+        Source("byse", "Byse", GROUP_HTTP),
+        Source("castletv", "CastleTV", GROUP_HTTP),
+        Source("cinejoy", "CineJoy", GROUP_HTTP),
+        Source("cinejoytv", "CineJoyTV", GROUP_HTTP),
+        Source("cinesrc", "CineSrc", GROUP_HTTP),
+        Source("cinestream", "CineStream", GROUP_HTTP),
+        Source("dahmermovies", "DahmerMovies", GROUP_HTTP),
+        Source("desiflix", "DesiFlix", GROUP_HTTP),
+        Source("dexter", "Dexter", GROUP_HTTP),
+        Source("duro", "Duro", GROUP_HTTP),
+        Source("framextv", "FrameXTV", GROUP_HTTP),
+        Source("hdmovie2", "HDMovie2", GROUP_HTTP),
+        Source("kisskh", "Kisskh", GROUP_HTTP),
+        Source("mapple", "Mapple", GROUP_HTTP),
+        Source("meowtv", "MeowTV", GROUP_HTTP),
+        Source("miner", "Miner", GROUP_HTTP),
+        Source("moviebox", "Moviebox", GROUP_HTTP),
+        Source("movies4u", "Movies4u", GROUP_HTTP),
+        Source("moviesdrive1", "MoviesDrive1", GROUP_HTTP),
+        Source("movieshunt", "MoviesHunt", GROUP_HTTP),
+        Source("moviesjoy", "MoviesJoy", GROUP_HTTP),
+        Source("movix", "Movix", GROUP_HTTP),
+        Source("netmirror", "NetMirror", GROUP_HTTP),
+        Source("noxpulse", "NoxPulse", GROUP_HTTP),
+        Source("onetouchtv", "OneTouchTV", GROUP_HTTP),
+        Source("showbox", "ShowBox", GROUP_HTTP),
+        Source("streamflix", "StreamFlix", GROUP_HTTP),
+        Source("superstream", "SuperStream", GROUP_HTTP),
+        Source("titan", "Titan", GROUP_HTTP),
+        Source("uhdmovies", "UHDMovies", GROUP_HTTP),
+        Source("valkyrie", "Valkyrie", GROUP_HTTP),
+        Source("vaplayer", "VAPlayer", GROUP_HTTP),
+        Source("vegamovies", "VegaMovies", GROUP_HTTP),
+        Source("vidbolt", "VidBolt", GROUP_HTTP),
+        Source("vidbox", "VidBox", GROUP_HTTP),
+        Source("videasy", "VidEasy", GROUP_HTTP),
+        Source("vidfast", "VidFast", GROUP_HTTP),
+        Source("vidlink", "VidLink", GROUP_HTTP),
         Source("vidrock", "VidRock", GROUP_HTTP),
+        Source("vidsrc", "VidSrc", GROUP_HTTP),
+        Source("vidstuck", "VidStuck", GROUP_HTTP),
+        Source("vidy", "Vidy", GROUP_HTTP),
+        Source("vixsrc", "VixSrc", GROUP_HTTP),
+        Source("vumeto", "Vumeto", GROUP_HTTP),
     )
 
     /**
@@ -69,19 +114,7 @@ object SourceCatalog {
      * The live backend answers `404` for all of them, so they are only reached
      * when the current routes fail.
      */
-    val LEGACY_PROVIDERS = listOf(
-        Source("multiembed", "MultiEmbed", GROUP_HTTP),
-        Source("vidzee", "VidZee", GROUP_HTTP),
-        Source("fmovies", "FMovies", GROUP_HTTP),
-        Source("vixsrc", "VixSrc", GROUP_HTTP),
-        Source("primesrc", "PrimeSrc", GROUP_HTTP),
-        Source("twoembed", "TwoEmbed", GROUP_HTTP),
-        Source("vidsrc", "VidSrc", GROUP_HTTP),
-        Source("4khd", "4KHDHub", GROUP_HTTP),
-        Source("kmmovies", "KMMovies", GROUP_HTTP),
-        Source("moviesmod", "MoviesMod", GROUP_HTTP),
-        Source("uhdmovies", "UHDMovies", GROUP_HTTP),
-    )
+    val LEGACY_PROVIDERS = emptyList<Source>()
 
     /** The torrent provider. It is keyed by the IMDb id, not by the TMDB id. */
     val TORRENT_PROVIDERS = listOf(
