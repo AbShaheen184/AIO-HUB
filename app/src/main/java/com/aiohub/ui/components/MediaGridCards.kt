@@ -1,7 +1,9 @@
 package com.aiohub.ui.components
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,10 +27,30 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+
+private fun Modifier.dpadActivatable(onActivate: () -> Unit): Modifier =
+    this
+        .focusable()
+        .onPreviewKeyEvent { event ->
+            val native = event.nativeKeyEvent
+            if (native.action == KeyEvent.ACTION_DOWN &&
+                native.keyCode in setOf(
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                )
+            ) {
+                onActivate()
+                true
+            } else {
+                false
+            }
+        }
 
 /**
  * A poster sized for an adaptive grid.
@@ -49,6 +71,7 @@ fun PosterGridCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .dpadActivatable(onClick)
             .clickable(onClick = onClick),
     ) {
         Card(

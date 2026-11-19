@@ -1,7 +1,9 @@
 package com.aiohub.ui.components
 
+import android.view.KeyEvent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,11 +28,31 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.aiohub.ui.tv.posterCardWidthDp
+
+private fun Modifier.dpadActivatable(onActivate: () -> Unit): Modifier =
+    this
+        .focusable()
+        .onPreviewKeyEvent { event ->
+            val native = event.nativeKeyEvent
+            if (native.action == KeyEvent.ACTION_DOWN &&
+                native.keyCode in setOf(
+                    KeyEvent.KEYCODE_DPAD_CENTER,
+                    KeyEvent.KEYCODE_ENTER,
+                    KeyEvent.KEYCODE_NUMPAD_ENTER,
+                )
+            ) {
+                onActivate()
+                true
+            } else {
+                false
+            }
+        }
 
 /** Poster card used across the browse grids. */
 @Composable
@@ -50,6 +72,7 @@ fun PosterCard(
     Column(
         modifier = modifier
             .width(cardWidth.dp)
+            .dpadActivatable(onClick)
             .clickable(onClick = onClick),
     ) {
         Card(
@@ -115,7 +138,9 @@ fun BackdropCard(
     Card(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        modifier = modifier.width(width.dp),
+        modifier = modifier
+            .width(width.dp)
+            .dpadActivatable(onClick),
     ) {
         Box(
             modifier = Modifier
@@ -174,7 +199,9 @@ fun PersonCard(
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier
+            .dpadActivatable(onClick)
+            .clickable(onClick = onClick),
     ) {
         AsyncImage(
             model = profileUrl,

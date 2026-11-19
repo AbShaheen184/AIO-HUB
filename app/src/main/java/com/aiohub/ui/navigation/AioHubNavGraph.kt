@@ -39,10 +39,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -206,6 +208,7 @@ private fun CollapsibleSidebar(
     /** Asked for the focus when the drawer is closed, and at the start. */
     menuRequester: FocusRequester = remember { FocusRequester() },
 ) {
+    val focusManager = LocalFocusManager.current
     Box(modifier = modifier) {
         if (expanded) {
             // Semi-transparent scrim covering full screen
@@ -303,13 +306,31 @@ private fun CollapsibleSidebar(
                         .focusRequester(menuRequester)
                         .onPreviewKeyEvent { event ->
                             val native = event.nativeKeyEvent
-                            if (native.action == KeyEvent.ACTION_DOWN &&
-                                native.keyCode == KeyEvent.KEYCODE_DPAD_LEFT
-                            ) {
-                                onToggle()
-                                true
-                            } else {
+                            if (native.action != KeyEvent.ACTION_DOWN) {
                                 false
+                            } else {
+                                when (native.keyCode) {
+                                    KeyEvent.KEYCODE_DPAD_LEFT -> {
+                                        onToggle()
+                                        true
+                                    }
+
+                                    // The collapsed menu sits above the content; hand
+                                    // focus into the screen so the remote can reach
+                                    // rows/grids without needing a touch.
+                                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                                    KeyEvent.KEYCODE_DPAD_DOWN -> {
+                                        focusManager.moveFocus(
+                                            if (native.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) {
+                                                FocusDirection.Right
+                                            } else {
+                                                FocusDirection.Down
+                                            },
+                                        )
+                                    }
+
+                                    else -> false
+                                }
                             }
                         },
                 ) {
